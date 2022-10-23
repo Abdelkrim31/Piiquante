@@ -1,4 +1,3 @@
-
 // appel de mangoose
 const mongoose = require("mongoose");
 // appel de mongoose-unique-validator après installation

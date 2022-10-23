@@ -9,9 +9,6 @@ module.exports = (req, res, next) => {
 
     // décoder le token en vérifiant qu'il correspond avec sa clé secrète
     const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET_ALEATOIRE);
-    /*
-    const decodedToken = jwt.verify(token, 'RANDOM_TOKEN_SECRET');
-    */
     // on récupère le user id décodé par le jwt.vérify
     const userId = decodedToken.userId;
     // on rajoute l'objet userId à l'objet requête

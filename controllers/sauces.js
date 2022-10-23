@@ -1,377 +1,169 @@
 // on appelle le modèle de la sauce
-const Sauce = require("../models/Sauce");
+const Sauce = require('../models/sauce');
 // on appelle fs (filesystem) qui permet d'aller dans les fichiers
-const fs = require("fs");
-const { error } = require("console");
+const fs = require('fs');
+
 //----------------------------------------------------------------------------------
 // LOGIQUE GETALLSAUCE
 //----------------------------------------------------------------------------------
 // accède à toutes les sauces
 // une personne avec un webtokenvalide accède à ces informations puisque seulement le token identifie et donne accès
 exports.getAllSauce = (req, res, next) => {
-  // on veut la liste complète des Sauces alors on utilise find() sans argument
-  Sauce.find()
+    // on veut la liste complète des Sauces alors on utilise find() sans argument
+    Sauce.find()
     //  status 200 OK et sauces en json
-    .then((sauces) => {
-      res.status(200).json(sauces);
-    })
+    .then(sauces => res.status(200).json(sauces))
     // erreur un status 400 Bad Request et l'erreur en json
-    .catch((error) => res.status(400).json({ error }));
+    .catch(error => res.status(400).json({ error }));
 };
+
 //----------------------------------------------------------------------------------
 // LOGIQUE GETONESAUCE
 //----------------------------------------------------------------------------------
 // accède à une sauce
 // une personne avec un webtokenvalide accède à ces informations puisque seulement le token identifie et donne accés
 exports.getOneSauce = (req, res, next) => {
-  // on utilise le modele mangoose et findOne pour trouver un objet via la comparaison req.params.id
-  Sauce.findOne({ _id: req.params.id })
-    // status 200 OK et l'élément en json
-    .then((sauce) => res.status(200).json(sauce))
-    // si erreur envoit un status 404 Not Found et l'erreur en json
-    .catch((error) => res.status(404).json({ error }));
+    // on utilise le modele mangoose et findOne pour trouver un objet via la comparaison req.params.id
+    Sauce.findOne({ _id: req.params.id })
+        .then(sauce => res.status(200).json(sauce))
+        .catch(error => res.status(404).json({ error }));
 };
+
 //----------------------------------------------------------------------------------
 // LOGIQUE CREATESAUCE
 //----------------------------------------------------------------------------------
-// créait une sauce
+// créer une sauce
 exports.createSauce = (req, res, next) => {
-  // on extrait le sauce de la requete via le parse
-  // dans req.body.sauce le sauce correspont à la key de postman pour ajouter les infos en texte
-  const sauceObject = JSON.parse(req.body.sauce);
-  // constant qui servira à initialiser certains paramètres à la création
-  const initialisation = {
-    likes: 0,
-    dislikes: 0,
-    usersLiked: [],
-    usersDisliked: [],
-  };
-  // l'user id de la requête doit etre le même que l'id associé au token (si sur postman une personne rentre dans la data un autre id que celui du token)
-  if (sauceObject.userId !== req.auth.userId) {
-    // reponse en status 403 Forbidden avec message json
-    return res.status(403).json("unauthorized request");
-    // détermine si le fichier envoyé est bien une image 
-  } else if (
-    req.file.mimetype === "image/jpeg" ||
-    req.file.mimetype === "image/png" ||
-    req.file.mimetype === "image/jpg" ||
-    req.file.mimetype === "image/bmp" ||
-    req.file.mimetype === "image/gif" ||
-    req.file.mimetype === "image/ico" ||
-    req.file.mimetype === "image/svg" ||
-    req.file.mimetype === "image/tiff" ||
-    req.file.mimetype === "image/tif" ||
-    req.file.mimetype === "image/webp"
-  ) {
+    // on extrait la sauce de la requete via le parse
+    const sauceObject = JSON.parse(req.body.sauce);
+    delete sauceObject._id;
     // déclaration de sauce qui sera une nouvelle instance du modele Sauce qui contient toutes les informations dont on a besoin
     const sauce = new Sauce({
-      // raccourci spread pour récupérer toutes les données de req.body ( title description...)
-      ...sauceObject,
-      // l'image url correspont au protocole avec :// puis la valeur du port (host) dans le dossier images qui a le nom
-      imageUrl: `${req.protocol}://${req.get("host")}/images/${
-        req.file.filename
-      }`,
-      ...initialisation,
+        // raccourci spread pour récupérer toutes les données de req.body ( title, description...)
+        ...sauceObject,
+        // l'image url correspont au protocole avec :// puis la valeur du port (host) dans le dossier images qui a le nom
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
+        likes: 0,
+        dislikes: 0
     });
-    // si problème avec valeur heat (postman) initialisation de sa valeur
-    if (sauce.heat < 0 || sauce.heat > 10) {
-      sauce.heat = 0;
-      console.log("valeur heat invalide, heat initialisé");
-    }
-    // enregistre l'objet dans la base de donnée
-    sauce
-      .save()
-      // retourne une promesse, il faut une réponse sinon il y a expiration de la requete donc un status 201 Created pour bonne création de ressource + message
-      .then(() =>
-        res
-          .status(201)
-          .json({ message: "POST recorded sauce (FR)sauce enregistrée !" })
-      )
-      // en cas d'erreur on renvoit un status 400 Bad Request et l'erreur
-      .catch((error) => res.status(400).json({ error }));
-    // si ce qui est envoyé n'est pas un fichier image
-  } else {
-    // déclaration de sauce qui sera une nouvelle instance du modele Sauce qui contient toutes les informations dont on a besoin
-    const sauce = new Sauce({
-      // raccourci spread pour récupérer toutes les données de req.body ( title description...)
-      ...sauceObject,
-      // on met une image par defaut
-      // l'image url correspont au protocole avec :// puis la valeur du port (host) dans le dossier images qui a le nom
-      imageUrl: `${req.protocol}://${req.get(
-        "host"
-      )}/images/defaut/imagedefaut.png`,
-      ...initialisation,
-    });
-    // si problème avec valeur heat (postman) initialisation de sa valeur
-    if (sauce.heat < 0 || sauce.heat > 10) {
-      sauce.heat = 0;
-      console.log("valeur heat invalide, heat initialisé");
-    }
-    // enregistre l'objet dans la base de donnée
-    sauce
-      .save()
-      // retourne une promesse un status 201 OK pour bonne création de ressource + message
-      .then(() =>
-        res
-          .status(201)
-          .json({ message: "POST recorded sauce (FR)sauce enregistrée !" })
-      )
-      // en cas d'erreur on renvoit un status 400 Bad Request et l'erreur
-      .catch((error) => res.status(400).json({ error }));
-  }
+    // enregistre l'objet dans la base de données
+    sauce.save()
+    // retourne une promesse, il faut une réponse sinon il y a expiration de la requete donc un status 201 Created pour bonne 
+    // création de ressource + message
+        .then(() => res.status(201).json({ message: 'Sauce enregistrée !'}))
+        // en cas d'erreur on renvoit un status 400 Bad Request et l'erreur
+        .catch(error => {
+            console.log(json({ error }));
+            res.status(400).json({ error });
+        });
 };
+
 //----------------------------------------------------------------------------------
 // LOGIQUE MODIFYSAUCE
 //----------------------------------------------------------------------------------
-// modifie une sauce
 exports.modifySauce = (req, res, next) => {
-  // l'id de la sauce est l'id inscrit dans l'url
-  Sauce.findOne({ _id: req.params.id })
-    // si la sauce existe
-    .then((sauce) => {
-      // cette variable permettra de traverser le scope pour réduire le code
-      var sauceBot;
-      //constante de valeur heat de la sauce avant modification, servira si le nouveau heat a une valeur inacceptable (via postman)
-      const heatAvant = sauce.heat;
-      //l'user sera celui validé par le token, on ne pourra pas modifier l'appartenance de la sauce
-      const immuable = {
-        userId: req.auth.userId,
-        likes: sauce.likes,
-        dislikes: sauce.dislikes,
-        usersLiked: sauce.usersLiked,
-        usersDisliked: sauce.usersDisliked,
-      };
-      // l'id du créateur de la sauce doit etre le meme que celui identifié par le token
-      if (sauce.userId !== req.auth.userId) {
-        // reponse en status 403 Forbidden avec message json
-        return res.status(403).json("unauthorized request");
-        // si il y a un fichier avec la demande de modification
-      } else if (req.file) {
-        // on vérifie que c'est bien une image 
-        if (
-          req.file.mimetype === "image/jpeg" ||
-          req.file.mimetype === "image/png" ||
-          req.file.mimetype === "image/jpg" ||
-          req.file.mimetype === "image/bmp" ||
-          req.file.mimetype === "image/gif" ||
-          req.file.mimetype === "image/ico" ||
-          req.file.mimetype === "image/svg" ||
-          req.file.mimetype === "image/tiff" ||
-          req.file.mimetype === "image/tif" ||
-          req.file.mimetype === "image/webp"
-        ) {
-          // on détermine le nom de l'ancien fichier image
-          const filename = sauce.imageUrl.split("/images/")[1];
-          // si ceci correspond à une partie du nom de l'image par defaut
-          const testImage = 'defaut/imagedefaut.png';
-          // si le nom de l'image ne correspont pas à l'image defaut
-          if(testImage != filename){
-          // on efface le fichier image qui doit se faire remplacer
-          fs.unlink(`images/${filename}`, () => {});
-          }
-          // on extrait le sauce de la requete via le parse
-          // dans req.body.sauce le sauce correspont à la key de postman pour ajouter les infos en texte
-          const sauceObject = {
-            ...JSON.parse(req.body.sauce),
-            // on ajoute l'image avec ce nom
-            imageUrl: `${req.protocol}://${req.get("host")}/images/${
-              req.file.filename
-            }`,
-            ...immuable,
-          };
-          sauceBot = sauceObject;
-          // si le fichier n'est pas une image
-        } else {
-          // on détermine le nom de l'ancien fichier image
-          const filename = sauce.imageUrl.split("/images/")[1];
-          // si ceci correspond à une partie du nom de l'image par defaut
-          const testImage = 'defaut/imagedefaut.png';
-          // si le nom de l'image ne correspont pas à l'image defaut
-          if(testImage != filename){
-          // on efface le fichier image qui doit se faire remplacer
-          fs.unlink(`images/${filename}`, () => {});
-          }
-          // on récupère avec le parse req.body.sauce et on y ajoute la nouvelle image
-          const sauceObject = {
-            ...JSON.parse(req.body.sauce),
-            // l'image sera l'image par defaut
-            imageUrl: `${req.protocol}://${req.get(
-              "host"
-            )}/images/defaut/imagedefaut.png`,
-            ...immuable,
-          };
-          sauceBot = sauceObject;
-        }
-        // si il n'y a pas de fichier avec la modification (ps: il garde son image injectée à la création)
-      } else {
-        // puisqu'il n'y a pas de fichier image, l'imageUrl de la requete sera par defaut l'ancienne imageUrl même si on modifie l'entrée avec postman
-        req.body.imageUrl = sauce.imageUrl;
-        // la sauce sera la requete
-        const sauceObject = {
-          ...req.body,
-          ...immuable,
-        };
-        sauceBot = sauceObject;
-      }
-      // si problème avec valeur heat (postman) sa valeur restera celle avant la requête
-      if (sauceBot.heat < 0 || sauceBot.heat > 10) {
-        sauceBot.heat = heatAvant;
-        console.log("valeur heat invalide, ancienne valeur heat conservée");
-      }
-      // modifie un sauce dans la base de donnée, 1er argument c'est l'objet qu'on modifie avec id correspondant à l'id de la requete
-      // et le deuxième argument c'est la nouvelle version de l'objet qui contient le sauce qui est dans le corp de la requete et que _id correspond à celui des paramètres
-      Sauce.updateOne(
-        { _id: req.params.id },
-        { ...sauceBot, _id: req.params.id }
-      )
-        // retourne une promesse avec status 201 Created et message en json
-        .then(() =>
-          res
-            .status(201)
-            .json({ message: "modified sauce (FR)Objet modifié !" })
-        )
-        // en cas d'erreur un status 400 Bad Request et l'erreur en json
-        .catch((error) => res.status(400).json({ error }));
-    })
-    // en cas d'erreur
-    .catch((error) => {
-      // si il y a un fichier avec la requete
-      if (req.file) {
-        // le fichier de la requete a été créé avec multer donc on l'éfface
-        fs.unlink(`images/${req.file.filename}`, () => {});
-      }
-      // erreur 404 Not Found indique l'erreur en json
-      res.status(404).json({ error });
-    });
+    if (req.file) {
+//// si l'image est modifiée, il faut supprimer l'ancienne image dans le dossier /image :
+        Sauce.findOne({ _id: req.params.id }) // l'id de la sauce est l'id user dans l'url
+            // si la sauce existe
+            .then(sauce => {
+                const filename = sauce.imageUrl.split('/images/')[1];
+                // on efface le fichier image qui doit se faire remplacer
+                fs.unlink(`images/${filename}`, () => {
+
+        //// une fois que l'ancienne image est supprimée dans le dossier /image, on peut mettre à jour le reste :
+                    const sauceObject = {
+                        ...JSON.parse(req.body.sauce),
+                        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+                    }
+                    // modifie une sauce dans la base de données, 
+                    //1er argument c'est l'objet qu'on modifie avec id correspondant à l'id de la requete
+                    // et le deuxième argument c'est la nouvelle version de l'objet qui contient la sauce qui est dans 
+                    //le corps de la requete et que _id correspond à celui des paramètres
+                    Sauce.updateOne({ _id: req.params.id }, { ...sauceObject, _id: req.params.id })
+                        .then(() => res.status(200).json({ message: 'Sauce modifiée!' }))
+                        .catch(error => res.status(400).json({ error }));
+                })
+            })
+            .catch(error => res.status(500).json({ error }));
+    } else {
+//// si l'image n'est pas modifiée :
+        const sauceObject = { ...req.body };
+        Sauce.updateOne({ _id: req.params.id }, { ...sauceObject, _id: req.params.id })
+            .then(() => res.status(200).json({ message: 'Sauce modifiée!' }))
+            .catch(error => res.status(400).json({ error }));
+    }
 };
+
 //----------------------------------------------------------------------------------
 // LOGIQUE DELETESAUCE
 //----------------------------------------------------------------------------------
-// efface une sauce
+// effacer une sauce
 exports.deleteSauce = (req, res, next) => {
-  // trouve dans les sauce un _id correspondant à l'id de la requete
-  Sauce.findOne({ _id: req.params.id })
-    // si il trouve sauce
-    .then((sauce) => {
-      //variable du nom de l'image de la sauce trouvée
-      const nomImage = sauce.imageUrl;
-      // variable de l'image sauce par défaut
-      const imDefaut = "http://localhost:3000/images/defaut/imagedefaut.png";
-      // l'id du créateur de la sauce doit etre le meme que celui identifié par le token sinon
-      if (sauce.userId !== req.auth.userId) {
-        // reponse en status 403 Forbidden avec message json
-        return res.status(403).json("unauthorized request");
-        // et si nom de l'image sauce est différante de celle par defaut
-      } else if (nomImage != imDefaut) {
-        // on créait un tableau via l'url et en séparant la partie '/images' et ensuite on recupère l'indice 1 du tableau qui est le nom du fichier
-        const filename = sauce.imageUrl.split("/images/")[1];
-        // unlink va supprimer le fichier image de la sauce concernée dans le dossier image
-        fs.unlink(`images/${filename}`, () => {
-          // effacera un sauce et son _id sera la comparaison avec l'id des paramètres de la requete (paramètre de route)
-          Sauce.deleteOne({ _id: req.params.id })
-            // retourne une promesse status 200 OK et message en json
-            .then(() =>
-              res
-                .status(200)
-                .json({ message: "sauce removed (FR)sauce supprimée !" })
-            )
-            // si erreur status 400 400 Bad Request et erreur en json
-            .catch((error) => res.status(400).json({ error }));
-        });
-        // alors le nom de l'image sauce est celui de celle par defaut
-      } else {
-        // effacera un sauce et son _id sera la comparaison avec l'id des paramètres de la requete (paramètre de route)
-        Sauce.deleteOne({ _id: req.params.id })
-          // retourne une promesse status 200 OK et message en json
-          .then(() =>
-            res
-              .status(200)
-              .json({ message: "sauce removed (FR)sauce supprimée !" })
-          )
-          // si erreur status 400 Bad Request et erreur en json
-          .catch((error) => res.status(400).json({ error }));
-      }
-    })
-    // erreur 404 Not Found avec erreur en json
-    .catch((error) => res.status(404).json({ error }));
+    // trouve dans les sauce un _id correspondant à l'id de la requete
+    Sauce.findOne({ _id: req.params.id })
+        .then(sauce => {
+            // on créait un tableau via l'url et en séparant la partie '/images' et ensuite on recupère 
+            // l'indice 1 du tableau qui est le nom du fichier
+            const filename = sauce.imageUrl.split('/images/')[1];
+            // unlink va supprimer le fichier image de la sauce concernée dans le dossier image
+            fs.unlink(`images/${filename}`, () => {
+            // effacera un sauce et son _id sera la comparaison avec l'id des paramètres de la requete (paramètre de route)
+                Sauce.deleteOne({ _id: req.params.id })
+                 // retourne une promesse status 200 OK et message en json
+                    .then(() => res.status(200).json({ message: 'Sauce supprimée !'}))
+                // si erreur status 400 Bad Request et erreur en json
+                    .catch(error => res.status(400).json({ error }));
+            })
+        })
+        .catch(error => res.status(500).json({ error }));
 };
+
 //----------------------------------------------------------------------------------
-// LOGIQUE LIKESAUCE
+// LOGIQUE LIKE / DISLIKE SAUCE
 //----------------------------------------------------------------------------------
 // like une sauce
 exports.likeSauce = (req, res, next) => {
-  // on utilise le modele mangoose et findOne pour trouver un objet via la comparaison req.params.id
-  Sauce.findOne({ _id: req.params.id })
-    //retourne une promesse avec reponse status 200 OK et l'élément en json
-    .then((sauce) => {
-      // définition de diverse variables
-      let valeurVote;
-      let votant = req.body.userId;
-      let like = sauce.usersLiked;
-      let unlike = sauce.usersDisliked;
-      // determine si l'utilisateur est dans un tableau
-      let bon = like.includes(votant);
-      let mauvais = unlike.includes(votant);
-      // ce comparateur va attribuer une valeur de point en fonction du tableau dans lequel il est
-      if (bon === true) {
-        valeurVote = 1;
-      } else if (mauvais === true) {
-        valeurVote = -1;
-      } else {
-        valeurVote = 0;
-      }
-      // ce comparateur va determiner le vote de l'utilisateur par rapport à une action de vote
-      // si l'user n'a pas voté avant et vote positivement
-      if (valeurVote === 0 && req.body.like === 1) {
-        // ajoute 1 vote positif à likes
-        sauce.likes += 1;
-        // le tableau usersLiked contiendra l'id de l'user
-        sauce.usersLiked.push(votant);
-        // si l'user a voté positivement et veut annuler son vote
-      } else if (valeurVote === 1 && req.body.like === 0) {
-        // enlève 1 vote positif
-        sauce.likes -= 1;
-        // filtre/enlève l'id du votant du tableau usersLiked
-        const nouveauUsersLiked = like.filter((f) => f != votant);
-        // on actualise le tableau
-        sauce.usersLiked = nouveauUsersLiked;
-        // si l'user a voté négativement et veut annuler son vote
-      } else if (valeurVote === -1 && req.body.like === 0) {
-        // enlève un vote négatif
-        sauce.dislikes -= 1;
-        // filtre/enlève l'id du votant du tableau usersDisliked
-        const nouveauUsersDisliked = unlike.filter((f) => f != votant);
-        // on actualise le tableau
-        sauce.usersDisliked = nouveauUsersDisliked;
-        // si l'user n'a pas voté avant et vote négativement
-      } else if (valeurVote === 0 && req.body.like === -1) {
-        // ajoute 1 vote positif à unlikes
-        sauce.dislikes += 1;
-        // le tableau usersDisliked contiendra l'id de l'user
-        sauce.usersDisliked.push(votant);
-        // pour tout autre vote, il ne vient pas de l'index/front donc probabilité de tentative de vote illégal
-      } else {
-        console.log("tentavive de vote illégal");
-      }
-      // met à jour la sauce
-      Sauce.updateOne(
-        { _id: req.params.id },
-        {
-          likes: sauce.likes,
-          dislikes: sauce.dislikes,
-          usersLiked: sauce.usersLiked,
-          usersDisliked: sauce.usersDisliked,
-        }
-      )
-        // retourne une promesse avec status 201 Created et message en json
-        .then(() => res.status(201).json({ message: "Vous venez de voter" }))
-        // en cas d'erreur un status 400 et l'erreur en json
-        .catch((error) => {
-          if (error) {
-            console.log(error);
-          }
-        });
-    })
-    // si erreur envoi un statut 404 Not Found et l'erreur en json
-    .catch((error) => res.status(404).json({ error }));
-};
+    const userId = req.body.userId;
+    const like = req.body.like;
+    const sauceId = req.params.id;
+    Sauce.findOne({ _id: sauceId })
+        .then(sauce => {
+            // nouvelles valeurs à modifier
+            const newValues = {
+                usersLiked: sauce.usersLiked,
+                usersDisliked: sauce.usersDisliked,
+                likes: 0,
+                dislikes: 0
+            }
+            // Différents cas:
+            switch (like) {
+                case 1:  // CAS: sauce liked
+                    newValues.usersLiked.push(userId);
+                    break;
+                case -1:  // CAS: sauce disliked
+                    newValues.usersDisliked.push(userId);
+                    break;
+                case 0:  // CAS: Annulation du like/dislike
+                    if (newValues.usersLiked.includes(userId)) {
+                        // si on annule le like
+                        const index = newValues.usersLiked.indexOf(userId);
+                        newValues.usersLiked.splice(index, 1);
+                    } else {
+                        // si on annule le dislike
+                        const index = newValues.usersDisliked.indexOf(userId);
+                        newValues.usersDisliked.splice(index, 1);
+                    }
+                    break;
+            };
+            // Calcul du nombre de likes / dislikes
+            newValues.likes = newValues.usersLiked.length;
+            newValues.dislikes = newValues.usersDisliked.length;
+            // Mise à jour de la sauce avec les nouvelles valeurs
+            Sauce.updateOne({ _id: sauceId }, newValues )
+                .then(() => res.status(200).json({ message: 'Sauce notée !' }))
+                .catch(error => res.status(400).json({ error }))  
+        })
+        .catch(error => res.status(500).json({ error }));
+}
+

@@ -21,7 +21,6 @@ const normalizePort = (val) => {
   // sinon retourne faux
   return false;
 };
-
 // const port = normalizePort(process.env.PORT || '3000');
 const port = normalizePort(process.env.PORT || "3000");
 // indique à l'application express quelle doit tourner sur le 'port' avec la constante port

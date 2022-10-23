@@ -3,7 +3,7 @@
 const express = require("express");
 // constante app qui sera notre application; ça permet de créer une application express
 const app = express();
-// appel de helmet, il est utilisé pour sécuriser vos en-têtes http. 
+// appel de helmet, il est utilisé pour sécuriser les en-têtes http. 
 const helmet = require("helmet");
 // appel de dotenv qui stocke des variables d'environnement et ça servira pour l'appel mongodb en dessous.
 require("dotenv").config({ path: "./config/.env" });
@@ -16,7 +16,7 @@ const userRoutes = require("./routes/user");
 const path = require("path");
 
 //--------------------------------------------------------------------------------
-//Ajout du chemin statique ajouté à l'application pour fournir les images
+//Ajout du chemin statique à l'application pour fournir les images
 app.use('/images', express.static(path.join(__dirname, 'images'))); 
 //--------------------------------------------------------------------------------
 
@@ -28,7 +28,6 @@ app.use(helmet());
 //----------------------------------------------------------------------------------
 // Le CORS définit comment les serveurs et les navigateurs interagissent, 
 //en spécifiant quelles ressources peuvent être demandées de manière légitime
-
 app.use((req, res, next) => {
   // origine, droit d'accéder c'est tout le monde '*'
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -45,7 +44,6 @@ app.use((req, res, next) => {
   next();
 });
 //----------------------------------------------------------------------
-
 // middleware intercepte la requete et la transforme au bon format
 app.use(express.json());
 
@@ -60,10 +58,10 @@ app.use("/api/sauces", saucesRoutes);
 module.exports = app;
 
 //----------------------------------------------------------------------------------
-//Connexion à Mongoose
+//Connexion à MongoDB
 //----------------------------------------------------------------------------------
 const mongoose = require('mongoose');
-
+// Mongoose est un package qui facilite les interactions avec notre base de données MongoDB. 
   mongoose.connect(
     "mongodb+srv://" +
       process.env.MONGO_DB_USER +
